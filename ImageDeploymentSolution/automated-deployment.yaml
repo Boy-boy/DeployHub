@@ -1,0 +1,256 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: automated-deployment
+  labels:
+    name: automated-deployment
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-role
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "persistentvolumeclaims", "persistentvolumes", "events", "configmaps", "secrets", "namespaces"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "ingressclasses"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses", "volumeattachments"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterrolebindings", "clusterroles", "rolebindings", "roles"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-role-binding-automated-deployment
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: automated-deployment
+roleRef:
+  kind: ClusterRole
+  name: cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: automated-deployment
+spec:
+  storageClassName: nfs-sc  # 指定已存在的 StorageClass
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: minio
+  name: minio
+  namespace: automated-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+      - name: minio
+        image: quay.io/minio/minio:RELEASE.2025-02-07T23-21-09Z
+        command:
+        - /bin/bash
+        - -c
+        args: 
+        - minio server /data --console-address ":9090"
+        env:
+        - name: MINIO_ROOT_USER
+          value: "minioadmin"
+        - name: MINIO_ROOT_PASSWORD
+          value: "minioadmin"
+        - name: MINIO_API_REQUESTS_MAX
+          value: "1600"  
+        - name: MINIO_MAX_OBJECT_SIZE
+          value: "5368709120"
+        ports:
+        - containerPort: 9000
+        - containerPort: 9090
+        volumeMounts:
+        - mountPath: /data
+          name: minio-data
+      volumes:
+      - name: minio-data
+        persistentVolumeClaim:
+          claimName: minio-pvc  # 指定PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: minio
+  name: minio
+  namespace: automated-deployment
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9000
+    targetPort: 9000
+    name: api
+  - port: 9090
+    targetPort: 9090
+    name: console
+  selector:
+    app: minio
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: enterprise-root-ca-cert-secret
+  namespace: automated-deployment
+type: Opaque
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVlekNDQTJPZ0F3SUJBZ0lRS09sZWIvZjRpcDFJUHlORlVEU1NYREFOQmdrcWhraUc5dzBCQVFzRkFEQSsKTVJNd0VRWUtDWkltaVpQeUxHUUJHUllEWTI5dE1SWXdGQVlLQ1pJbWlaUHlMR1FCR1JZR2VuTm1kVzVrTVE4dwpEUVlEVlFRREV3WjZjMloxYm1Rd0lCY05NVFl3TkRBeE1UUXpNekUwV2hnUE16QXhOakF4TURnd01qUTNNelZhCk1ENHhFekFSQmdvSmtpYUprL0lzWkFFWkZnTmpiMjB4RmpBVUJnb0praWFKay9Jc1pBRVpGZ1o2YzJaMWJtUXgKRHpBTkJnTlZCQU1UQm5welpuVnVaRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQgpBS3FJenpLanJFSkt5eGZiUVpzL0luRGFEN3N6TWJJbDZJcjl3REFiNFFiWHRuZEFLYUx2dy96RmxUS3BNKzY0CkVNdlR4aXEvSFdqbzZXUTBlc0t1aUlSUVlNaHJIazhiVlhUalEyNW4vYW5NNFluTmQyT0FiL1F2WkdLdno1NDIKQkUrSjZvZVFsQ2NQVHA5bkpieUxaK0lNVHRZci93ZlJoa2QrbUhLV2ZwRkk5QlF4bXhYNXc4eGZac0tseVI0dwovWmtfRXlkS2ZpTFhLNmUyWTZxc2JPQnhibVdTSEc2aG5IOEdNSldyNEpNK1ZpYTVIRUpSMHVZRHppRVMwL2kyClJ1QXU0SHRnVXc2V1V6Yys2djBGaFlFRkpmOXNzNEJ5dXBHb0NjRXoyZHVBRjBRMzFNMC80NFV4QVBSZFFDbXAKRlVzNHBUcmhxZ25qRHhRTDhDVUFKQUVDQXdFQUFhT0NBWEV3Z2dGdE1Bc0dBMVVkRHdRRUF3SUJoakFQQmdOVgpIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRd2Z6OG4ycExRNDgyWkFuU3JzdFZiWEpvRGdqQ0I5QVlEClZSMGZCSUhzTUlIcE1JSG1vSUhqb0lIZ2hvR3NiR1JoY0Rvdkx5OURUajE2YzJaMWJtUXNRMDQ5YjJFdFpHTXcKTVN4RFRqMURSRkFzUTA0OVVIVmliR2xqSlRJd1MyVjVKVEl3VTJWeWRtbGpaWE1zUTA0OVUyVnlkbWxqWlhNcwpRMDQ5UTI5dVptbG5kWEpoZEdsdmJpeEVRejE2YzJaMWJtUXNSRU05WTI5dFAyTmxjblJwWm1sallYUmxVbVYyCmIyTmhkR2x2Ymt4cGMzUS9ZbUZ6WlQ5dlltcGxZM1JEYkdGemN6MWpVa3hFYVhOMGNtbGlkWFJwYjI1UWIybHUKZElZdmFIUjBjRG92TDI5aExXUmpNREV1ZW5ObWRXNWtMbU52YlM5RFpYSjBSVzV5YjJ4c0wzcHpablZ1WkM1agpjbXd3RWdZSkt3WUJCQUdDTnhVQkJBVUNBd0VBQWpBakJna3JCZ0VFQVlJM0ZRSUVGZ1FVbGVUeXFmcTlWazVhClkzRUhTNG1aRHRoK1FoSXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBQ0V2QndYRGdmT0hvR1VZdUJuNU9iVzEKQmxDSDZ0TG5XM0RucG5MNGlBajZKRlVnUDdSakdjQXFHc2M3a1puRnlSQTZYNDRiTndKb0ZnY3JmYUFMR0tqLwpqYzdYMDkxeFNhaVhSekVmVVNDZG12akwxbEJ1NnVhR1FvQ2NOS0JkQ0R3T21YMEd0a0YzNHYvbUxYbE5iUUpDCmROa1pFOWl1VnFsdHhYTHBmUWVJdUhxNGx5dWdyQ0JUZG5RMkthV0pJMzRkeHFMYm43NjlaSnpmczRwSHlZVkkKcjdPZTZYaFp4YktxSmJCbm1PRUQ5RzFCenFkUEZWazB0U1I5SDJ2SGN6QURycmtlMTg2WFF6cmFRNGRNTEhSawprZ2hzWVJRVmY2WW5lWjdXQVY1U1BVNGRNMEIzZVd4aVpOeDhHZzM1QXdFQlVnQ09nUGNxMTgvckRHVlk3aEk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imageuploaderapi
+  namespace: automated-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imageuploaderapi
+  template:
+    metadata:
+      labels:
+        app: imageuploaderapi
+    spec:
+      containers:
+      - name: imageuploaderapi
+        image: imageuploaderapi:latest
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          postStart:
+            exec:
+              command: ["sh", "-c", "update-ca-certificates"]
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: root-ca-cert
+          mountPath: /etc/ssl/certs/ca.crt
+          subPath: ca.crt
+        - name: root-ca-cert
+          mountPath: /usr/local/share/ca-certificates/ca.crt
+          subPath: ca.crt
+      volumes:
+      - name: root-ca-cert
+        secret:
+          secretName: enterprise-root-ca-cert-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imageuploaderapi
+  namespace: automated-deployment
+spec:
+  selector:
+    app: imageuploaderapi
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: imageuploaderapi-ingress
+  namespace: automated-deployment
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"  # 设置客户端请求体最大大小
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: cd.zsfund.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: imageuploaderapi
+            port:
+              number: 5000
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: imagebuilderapi
+  namespace: automated-deployment
+spec:
+  selector:
+    matchLabels:
+      app: imagebuilderapi
+  template:
+    metadata:
+      labels:
+        app: imagebuilderapi
+    spec:
+      securityContext:
+        runAsUser: 0  # 替换为root用户ID
+        runAsGroup: 0 # 替换为root组ID
+        fsGroup: 0    # 替换为root组ID
+        supplementalGroups: [995]  # 替换为系统用户 `docker` 的ID
+      containers:
+      - name: imagebuilderapi
+        image: imagebuilderapi:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+      volumes:
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imagebuilderapi
+  namespace: automated-deployment
+spec:
+  clusterIP: None  # 设置为None，表示无头服务
+  selector:
+    app: imagebuilderapi
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000   # DaemonSet Pod暴露的端口
