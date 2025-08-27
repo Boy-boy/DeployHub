@@ -47,21 +47,7 @@ data:
   ca.crt: #企业内部根证书
 ```
 
-`imageuploaderapi` Deployment 中的证书挂载保持不变：
-
-```yaml
-  volumeMounts:
-  - name: root-ca-cert
-    mountPath: /etc/ssl/certs/ca.crt
-    subPath: ca.crt
-  - name: root-ca-cert
-    mountPath: /usr/local/share/ca-certificates/ca.crt
-    subPath: ca.crt
-volumes:
-- name: root-ca-cert
-  secret:
-    secretName: enterprise-root-ca-cert-secret
-```
+`imageuploaderapi` Deployment yaml 保持不变：
 
 #### 如果**不需要认证授权**：
 
@@ -90,27 +76,43 @@ metadata:
 spec:
   # ... 其他配置保持不变
   template:
-    spec:
-      containers:
-      - name: imageuploaderapi
-        # 删除 lifecycle 中的证书更新命令
-        # lifecycle:
-        #   postStart:
-        #     exec:
-        #       command: ["sh", "-c", "update-ca-certificates"]
-        # 删除证书挂载配置
-        # volumeMounts:
-        # - name: root-ca-cert
-        #   mountPath: /etc/ssl/certs/ca.crt
-        #   subPath: ca.crt
-        # - name: root-ca-cert
-        #   mountPath: /usr/local/share/ca-certificates/ca.crt
-        #   subPath: ca.crt
-      # 删除 volumes 中的证书配置
-      # volumes:
-      # - name: root-ca-cert
-      #   secret:
-      #     secretName: enterprise-root-ca-cert-secret
+  metadata:
+    labels:
+      app: imageuploaderapi
+  spec:
+    # 1. 初始化容器 - 负责安装CA证书
+    #initContainers:
+    #- name: ca-cert-setup
+    #  image: mcr.microsoft.com/dotnet/aspnet:9.0 #切记： 使用与主容器相同的基础镜像
+    #  command: ['sh', '-c']
+    #  args:
+    #    - |
+    #      cp /tmp-ca/ca.crt /usr/local/share/ca-certificates/root-ca.crt
+    #      update-ca-certificates
+    #  volumeMounts:
+    #  - name: root-ca-cert # 挂载包含CA证书的Secret
+    #    mountPath: /tmp-ca
+    #    readOnly: true
+    #  - name: ca-trust-store # 挂载空卷，将与主容器共享更新后的信任存储
+    #    mountPath: /etc/ssl/certs
+    containers:
+    - name: imageuploaderapi
+      image: imageuploaderapi:latest
+      imagePullPolicy: IfNotPresent
+      ports:
+      - containerPort: 5000
+      volumeMounts:
+      # 2. 主容器挂载由initContainer更新后的CA信任存储目录
+      #- name: ca-trust-store
+      #  mountPath: /etc/ssl/certs # 系统CA信任存储目录
+      #  readOnly: true
+    volumes:
+    #- name: root-ca-cert
+    #  secret:
+    #    secretName: enterprise-root-ca-cert-secret
+    # 3. 定义一个空卷，作为initContainer和主容器之间的共享存储
+    #- name: ca-trust-store
+    #  emptyDir: {}
 ```
 
 ## 📁 目录结构
