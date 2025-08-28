@@ -33,11 +33,11 @@ builder.Host.UseNLog();
 
 
 #region Consul
-var consulOption = new ConsulOptions();
-builder.Configuration.GetSection("Consul").Bind(consulOption);
 var enableConsul = builder.Configuration.GetValue<bool>("EnableConsul");
 if (enableConsul)
 {
+    var consulOption = new ConsulOptions();
+    builder.Configuration.GetSection("Consul").Bind(consulOption);
     builder.Configuration.AddConsul(
         "config/cdservice/appsettings.json", // ÔÚConsulÖÐ´æ´¢µÄkey
         options =>
