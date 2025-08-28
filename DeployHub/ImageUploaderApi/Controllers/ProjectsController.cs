@@ -70,7 +70,7 @@ namespace ImageUploaderApi.Controllers
                     request.NewName,
                     request.Description);
 
-                return NoContent();
+                return Ok();
             }
             catch (ApplicationException ex) when (ex.Message.Contains("not found"))
             {
@@ -96,7 +96,7 @@ namespace ImageUploaderApi.Controllers
             try
             {
                 await _projectAppService.DeleteProjectAsync(projectId);
-                return NoContent();
+                return Ok();
             }
             catch (ApplicationException ex) when (ex.Message.Contains("not found"))
             {
@@ -205,7 +205,7 @@ namespace ImageUploaderApi.Controllers
                     request.YamlContent,
                     request.ChangeDescription);
 
-                return NoContent();
+                return Ok();
             }
             catch (ApplicationException ex) when (ex.Message.Contains("not found"))
             {
@@ -231,7 +231,7 @@ namespace ImageUploaderApi.Controllers
             try
             {
                 await _projectAppService.RollbackToTagAsync(projectId, tag);
-                return NoContent();
+                return Ok();
             }
             catch (ApplicationException ex) when (ex.Message.Contains("not found"))
             {
@@ -257,7 +257,7 @@ namespace ImageUploaderApi.Controllers
             try
             {
                 await _projectAppService.DeleteDeploymentConfigAsync(projectId, tag);
-                return NoContent();
+                return Ok();
             }
             catch (ApplicationException ex) when (ex.Message.Contains("not found"))
             {
