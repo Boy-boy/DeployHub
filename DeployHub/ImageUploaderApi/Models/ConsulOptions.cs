@@ -3,11 +3,6 @@
     public class ConsulOptions
     {
         /// <summary>
-        /// 是否开启Consul
-        /// </summary>
-        public bool IsEnabled { get; set; }
-
-        /// <summary>
         /// 地址
         /// </summary>
         public string Address { get; set; }

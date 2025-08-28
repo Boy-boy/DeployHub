@@ -31,6 +31,35 @@ builder.Services.Configure<FormOptions>(options =>
 });
 builder.Host.UseNLog();
 
+
+#region Consul
+var consulOption = new ConsulOptions();
+builder.Configuration.GetSection("Consul").Bind(consulOption);
+var enableConsul = builder.Configuration.GetValue<bool>("EnableConsul");
+if (enableConsul)
+{
+    builder.Configuration.AddConsul(
+        "config/cdservice/appsettings.json", // 在Consul中存储的key
+        options =>
+        {
+            options.ConsulConfigurationOptions = cco =>
+            {
+                cco.Address = new Uri(consulOption.Address);
+                cco.Token = consulOption.Token;
+            };
+            options.Optional = consulOption.Optional;
+            options.ReloadOnChange = consulOption.ReloadOnChange;
+            options.OnLoadException = exceptionContext =>
+            {
+                exceptionContext.Ignore = consulOption.IgnoreException;
+                Console.WriteLine($"加载Consul配置异常: {exceptionContext.Exception}");
+            };
+        }
+    );
+}
+#endregion
+
+
 builder.Services.AddScoped<MinIOService>();
 var minioConfig = builder.Configuration.GetSection("MinIO");
 builder.Services.AddSingleton(_ =>
@@ -124,32 +153,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-#endregion
-
-#region Consul
-var consulOption = new ConsulOptions();
-builder.Configuration.GetSection("Consul").Bind(consulOption);
-if (consulOption.IsEnabled)
-{
-    builder.Configuration.AddConsul(
-        "config/cdservice/appsettings.json", // 在Consul中存储的key
-        options =>
-        {
-            options.ConsulConfigurationOptions = cco =>
-            {
-                cco.Address = new Uri(consulOption.Address);
-                cco.Token = consulOption.Token;
-            };
-            options.Optional = consulOption.Optional;
-            options.ReloadOnChange = consulOption.ReloadOnChange;
-            options.OnLoadException = exceptionContext =>
-            {
-                exceptionContext.Ignore = consulOption.IgnoreException;
-                Console.WriteLine($"加载Consul配置异常: {exceptionContext.Exception}");
-            };
-        }
-    );
-}
 #endregion
 
 var app = builder.Build();
