@@ -1,9 +1,10 @@
+#注意：命名空间不要修改，代码里面有写死
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: deployhub
+  name: automated-deployment
   labels:
-    name: deployhub
+    name: automated-deployment
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -35,11 +36,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-role-binding-deployhub
+  name: cluster-role-binding-automated-deployment
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: deployhub
+  namespace: automated-deployment
 roleRef:
   kind: ClusterRole
   name: cluster-role
@@ -49,7 +50,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: minio-pvc
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   storageClassName: nfs-sc  # 指定已存在的 StorageClass
   accessModes:
@@ -64,7 +65,7 @@ metadata:
   labels:
     app: minio
   name: minio
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   replicas: 1
   selector:
@@ -109,7 +110,7 @@ metadata:
   labels:
     app: minio
   name: minio
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   type: ClusterIP
   ports:
@@ -126,16 +127,16 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: enterprise-root-ca-cert-secret
-  namespace: deployhub
+  namespace: automated-deployment
 type: Opaque
 data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVlekNDQTJPZ0F3SUJBZ0lRS09sZWIvZjRpcDFJUHlORlVEU1NYREFOQmdrcWhraUc5dzBCQVFzRkFEQSsKTVJNd0VRWUtDWkltaVpQeUxHUUJHUllEWTI5dE1SWXdGQVlLQ1pJbWlaUHlMR1FCR1JZR2VuTm1kVzVrTVE4dwpEUVlEVlFRREV3WjZjMloxYm1Rd0lCY05NVFl3TkRBeE1UUXpNekUwV2hnUE16QXhOakF4TURnd01qUTNNelZhCk1ENHhFekFSQmdvSmtpYUprL0lzWkFFWkZnTmpiMjB4RmpBVUJnb0praWFKay9Jc1pBRVpGZ1o2YzJaMWJtUXgKRHpBTkJnTlZCQU1UQm5welpuVnVaRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQgpBS3FJenpLanJFSkt5eGZiUVpzL0luRGFEN3N6TWJJbDZJcjl3REFiNFFiWHRuZEFLYUx2dy96RmxUS3BNKzY0CkVNdlR4aXEvSFdqbzZXUTBlc0t1aUlSUVlNaHJIazhiVlhUalEyNW4vYW5NNFluTmQyT0FiL1F2WkdLdno1NDIKQkUrSjZvZVFsQ2NQVHA5bkpieUxaK0lNVHRZci93ZlJoa2QrbUhLV2ZwRkk5QlF4bXhYNXc4eGZac0tseVI0dwovWmtfRXlkS2ZpTFhLNmUyWTZxc2JPQnhibVdTSEc2aG5IOEdNSldyNEpNK1ZpYTVIRUpSMHVZRHppRVMwL2kyClJ1QXU0SHRnVXc2V1V6Yys2djBGaFlFRkpmOXNzNEJ5dXBHb0NjRXoyZHVBRjBRMzFNMC80NFV4QVBSZFFDbXAKRlVzNHBUcmhxZ25qRHhRTDhDVUFKQUVDQXdFQUFhT0NBWEV3Z2dGdE1Bc0dBMVVkRHdRRUF3SUJoakFQQmdOVgpIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRd2Z6OG4ycExRNDgyWkFuU3JzdFZiWEpvRGdqQ0I5QVlEClZSMGZCSUhzTUlIcE1JSG1vSUhqb0lIZ2hvR3NiR1JoY0Rvdkx5OURUajE2YzJaMWJtUXNRMDQ5YjJFdFpHTXcKTVN4RFRqMURSRkFzUTA0OVVIVmliR2xqSlRJd1MyVjVKVEl3VTJWeWRtbGpaWE1zUTA0OVUyVnlkbWxqWlhNcwpRMDQ5UTI5dVptbG5kWEpoZEdsdmJpeEVRejE2YzJaMWJtUXNSRU05WTI5dFAyTmxjblJwWm1sallYUmxVbVYyCmIyTmhkR2x2Ymt4cGMzUS9ZbUZ6WlQ5dlltcGxZM1JEYkdGemN6MWpVa3hFYVhOMGNtbGlkWFJwYjI1UWIybHUKZElZdmFIUjBjRG92TDI5aExXUmpNREV1ZW5ObWRXNWtMbU52YlM5RFpYSjBSVzV5YjJ4c0wzcHpablZ1WkM1agpjbXd3RWdZSkt3WUJCQUdDTnhVQkJBVUNBd0VBQWpBakJna3JCZ0VFQVlJM0ZRSUVGZ1FVbGVUeXFmcTlWazVhClkzRUhTNG1aRHRoK1FoSXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBQ0V2QndYRGdmT0hvR1VZdUJuNU9iVzEKQmxDSDZ0TG5XM0RucG5MNGlBajZKRlVnUDdSakdjQXFHc2M3a1puRnlSQTZYNDRiTndKb0ZnY3JmYUFMR0tqLwpqYzdYMDkxeFNhaVhSekVmVVNDZG12akwxbEJ1NnVhR1FvQ2NOS0JkQ0R3T21YMEd0a0YzNHYvbUxYbE5iUUpDCmROa1pFOWl1VnFsdHhYTHBmUWVJdUhxNGx5dWdyQ0JUZG5RMkthV0pJMzRkeHFMYm43NjlaSnpmczRwSHlZVkkKcjdPZTZYaFp4YktxSmJCbm1PRUQ5RzFCenFkUEZWazB0U1I5SDJ2SGN6QURycmtlMTg2WFF6cmFRNGRNTEhSawprZ2hzWVJRVmY2WW5lWjdXQVY1U1BVNGRNMEIzZVd4aVpOeDhHZzM1QXdFQlVnQ09nUGNxMTgvckRHVlk3aEk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVlekNDQTJPZ0F3SUJBZ0lRS09sZWIvZjRpcDFJUHlORlVEU1NYREFOQmdrcWhraUc5dzBCQVFzRkFEQSsKTVJNd0VRWUtDWkltaVpQeUxHUUJHUllEWTI5dE1SWXdGQVlLQ1pJbWlaUHlMR1FCR1JZR2VuTm1kVzVrTVE4dwpEUVlEVlFRREV3WjZjMloxYm1Rd0lCY05NVFl3TkRBeE1UUXpNekUwV2hnUE16QXhOakF4TURnd01qUTNNelZhCk1ENHhFekFSQmdvSmtpYUprL0lzWkFFWkZnTmpiMjB4RmpBVUJnb0praWFKay9Jc1pBRVpGZ1o2YzJaMWJtUXgKRHpBTkJnTlZCQU1UQm5welpuVnVaRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQgpBS3FJenpLanJFSkt5eGZiUVpzL0luRGFEN3N6TWJJbDZJcjl3REFiNFFiWHRuZEFLYUx2dy96RmxUS3BNKzY0CkVNdlR4aXEvSFdqbzZXUTBlc0t1aUlSUVlNaHJIazhiVlhUalEyNW4vYW5NNFluTmQyT0FiL1F2WkdLdno1NDIKQkUrSjZvZVFsQ2NQVHA5bkpieUxaK0lNVHRZci93ZlJoa2QrbUhLV2ZwRkk5QlF4bXhYNXc4eGZac0tseVI0dwovWmtmRXlkS2ZpTFhLNmUyWTZxc2JPQnhibVdTSEc2aG5IOEdNSldyNEpNK1ZpYTVIRUpSMHVZRHppRVMwL2kyClJ1QXU0SHRnVXc2V1V6Yys2djBGaFlFRkpmOXNzNEJ5dXBHb0NjRXoyZHVBRjBRMzFNMC80NFV4QVBSZFFDbXAKRlVzNHBUcmhxZ25qRHhRTDhDVUFKQUVDQXdFQUFhT0NBWEV3Z2dGdE1Bc0dBMVVkRHdRRUF3SUJoakFQQmdOVgpIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRd2Z6OG4ycExRNDgyWkFuU3JzdFZiWEpvRGdqQ0I5QVlEClZSMGZCSUhzTUlIcE1JSG1vSUhqb0lIZ2hvR3NiR1JoY0Rvdkx5OURUajE2YzJaMWJtUXNRMDQ5YjJFdFpHTXcKTVN4RFRqMURSRkFzUTA0OVVIVmliR2xqSlRJd1MyVjVKVEl3VTJWeWRtbGpaWE1zUTA0OVUyVnlkbWxqWlhNcwpRMDQ5UTI5dVptbG5kWEpoZEdsdmJpeEVRejE2YzJaMWJtUXNSRU05WTI5dFAyTmxjblJwWm1sallYUmxVbVYyCmIyTmhkR2x2Ymt4cGMzUS9ZbUZ6WlQ5dlltcGxZM1JEYkdGemN6MWpVa3hFYVhOMGNtbGlkWFJwYjI1UWIybHUKZElZdmFIUjBjRG92TDI5aExXUmpNREV1ZW5ObWRXNWtMbU52YlM5RFpYSjBSVzV5YjJ4c0wzcHpablZ1WkM1agpjbXd3RWdZSkt3WUJCQUdDTnhVQkJBVUNBd0VBQWpBakJna3JCZ0VFQVlJM0ZRSUVGZ1FVbGVUeXFmcTlWazVhClkzRUhTNG1aRHRoK1FoSXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBQ0V2QndYRGdmT0hvR1VZdUJuNU9iVzEKQmxDSDZ0TG5XM0RucG5MNGlBajZKRlVnUDdSakdjQXFHc2M3a1puRnlSQTZYNDRiTndKb0ZnY3JmYUFMR0tqLwpqYzdYMDkxeFNhaVhSekVmVVNDZG12akwxbEJ1NnVhR1FvQ2NOS0JkQ0R3T21YMEd0a0YzNHYvbUxYbE5iUUpDCmROa1pFOWl1VnFsdHhYTHBmUWVJdUhxNGx5dWdyQ0JUZG5RMkthV0pJMzRkeHFMYm43NjlaSnpmczRwSHlZVkkKcjdPZTZYaFp4YktxSmJCbm1PRUQ5RzFCenFkUEZWazB0U1I5SDJ2SGN6QURycmtlMTg2WFF6cmFRNGRNTEhSawprZ2hzWVJRVmY2WW5lWjdXQVY1U1BVNGRNMEIzZVd4aVpOeDhHZzM1QXdFQlVnQ09nUGNxMTgvckRHVlk3aEk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: imageuploaderapi
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   replicas: 1
   selector:
@@ -184,7 +185,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: imageuploaderapi
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   selector:
     app: imageuploaderapi
@@ -198,7 +199,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: imageuploaderapi-ingress
-  namespace: deployhub
+  namespace: automated-deployment
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "2048m"  # 设置客户端请求体最大大小
 spec:
@@ -219,7 +220,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: imagebuilderapi
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   selector:
     matchLabels:
@@ -257,7 +258,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: imagebuilderapi
-  namespace: deployhub
+  namespace: automated-deployment
 spec:
   clusterIP: None  # 设置为None，表示无头服务
   selector:
