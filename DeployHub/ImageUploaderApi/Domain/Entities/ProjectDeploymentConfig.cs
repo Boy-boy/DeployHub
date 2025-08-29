@@ -10,6 +10,7 @@ namespace ImageUploaderApi.Domain.Entities
         public Guid ProjectId { get; private set; }
         public string Tag { get; private set; }  // 版本标识
         public string YamlContent { get; private set; }
+        public bool IsCurrent { get; private set; } // 标记是否为当前部署版本
         public string Description { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
@@ -29,9 +30,14 @@ namespace ImageUploaderApi.Domain.Entities
             ProjectId = projectId;
             YamlContent = yamlContent ?? throw new ArgumentNullException(nameof(yamlContent));
             Tag = tag ?? throw new ArgumentNullException(nameof(tag));
+            IsCurrent = false;
             Description = description;
             CreatedAt = DateTime.UtcNow;
         }
+
+        // 将目标版本标记为当前
+        public void MarkAsCurrent() => IsCurrent = true;
+        public void MarkAsNotCurrent() => IsCurrent = false;
 
         // 更新方法
         public void Update(string yamlContent, string description)

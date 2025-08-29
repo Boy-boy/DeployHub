@@ -75,6 +75,9 @@ namespace ImageUploaderApi.Persistence
                 entity.Property(c => c.YamlContent)
                     .IsRequired();
 
+                entity.Property(c => c.IsCurrent)
+                    .IsRequired();
+
                 entity.Property(c => c.Description)
                     .HasMaxLength(500);
 

@@ -297,6 +297,7 @@ namespace ImageUploaderApi.Controllers
             public Guid Id { get; set; }
             public string Tag { get; set; }
             public string Yaml { get; set; }
+            public bool IsCurrent { get; set; }
             public string Description { get; set; }
             public DateTime CreatedAt { get; set; }
 
@@ -305,6 +306,7 @@ namespace ImageUploaderApi.Controllers
                 Id = config.Id;
                 Tag = config.Tag;
                 Yaml = config.YamlContent;
+                IsCurrent = config.IsCurrent;
                 Description = config.Description;
                 CreatedAt = config.CreatedAt;
             }

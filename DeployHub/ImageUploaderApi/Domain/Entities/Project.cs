@@ -52,6 +52,7 @@ namespace ImageUploaderApi.Domain.Entities
             UpdatedAt = DateTime.UtcNow;
         }
 
+        #region 部署配置
         // 添加部署配置
         public ProjectDeploymentConfig AddDeploymentConfig(
             string yamlContent,
@@ -71,8 +72,6 @@ namespace ImageUploaderApi.Domain.Entities
                 description);
 
             DeploymentConfigs.Add(config);
-            //CurrentDeploymentConfigId = config.Id;
-            UpdatedAt = DateTime.UtcNow;
             return config;
         }
 
@@ -82,8 +81,9 @@ namespace ImageUploaderApi.Domain.Entities
             var targetConfig = DeploymentConfigs.FirstOrDefault(c => c.Tag == tag);
             if (targetConfig == null)
                 throw new DomainException($"Config with tag '{tag}' not found");
+            DeploymentConfigs.ForEach(p => p.MarkAsNotCurrent());
             CurrentDeploymentConfigId = targetConfig.Id;
-            UpdatedAt = DateTime.UtcNow;
+            targetConfig.MarkAsCurrent();
         }
 
         // 更新当前部署配置
@@ -93,9 +93,9 @@ namespace ImageUploaderApi.Domain.Entities
                 throw new DomainException("No current deployment config");
 
             CurrentDeploymentConfig.Update(yamlContent, changeDescription);
-            UpdatedAt = DateTime.UtcNow;
         }
 
+        //删除部署配置
         public void RemoveDeploymentConfig(ProjectDeploymentConfig config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -107,7 +107,7 @@ namespace ImageUploaderApi.Domain.Entities
             }
 
             DeploymentConfigs.Remove(config);
-            UpdatedAt = DateTime.UtcNow;
         }
+        #endregion
     }
 }

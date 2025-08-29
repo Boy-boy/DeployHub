@@ -121,7 +121,8 @@ namespace ImageUploaderApi.AppServices
                 throw new ApplicationException("Project not found");
 
             return project.DeploymentConfigs
-                .OrderByDescending(c => c.CreatedAt)
+                .OrderByDescending(c => c.IsCurrent)
+                .ThenByDescending(c => c.CreatedAt)
                 .ToList();
         }
 
